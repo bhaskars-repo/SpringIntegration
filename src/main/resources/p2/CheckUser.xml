@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/task
+                           http://www.springframework.org/schema/task/spring-task.xsd
+                           http://www.springframework.org/schema/integration
+                           http://www.springframework.org/schema/integration/spring-integration.xsd">
+
+    <bean id="inMsgHandler" class="com.polarsparc.si.p2.CheckUserHandler" />
+    <bean id="errMsgHandler" class="com.polarsparc.si.p2.CheckUserErrorHandler" />
+
+    <task:executor id="executor" queue-capacity="5" pool-size="3" />
+
+    <int:channel id="inChannel">
+        <int:dispatcher task-executor="executor" />
+    </int:channel>
+
+    <!--
+        The primary purpose of a Gateway is to hide the messaging API provided
+        by Spring Integration
+    -->
+
+    <int:gateway id="gateway"
+                 service-interface="com.polarsparc.si.p2.CheckUserGateway"
+                 default-request-channel="inChannel"
+                 error-channel="errChannel" />
+
+    <int:service-activator input-channel="inChannel"
+                           ref="inMsgHandler"
+                           method="checkUser" />
+
+    <int:service-activator input-channel="errChannel"
+                           ref="errMsgHandler"
+                           method="handleError" />
+
+</beans>

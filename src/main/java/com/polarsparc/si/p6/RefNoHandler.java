@@ -1,0 +1,28 @@
+/*
+ * Name:   RefNoHandler
+ * Author: Bhaskar S
+ * Date:   05/22/2021
+ * Blog:   https://www.polarsparc.com
+ */
+
+package com.polarsparc.si.p6;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.messaging.Message;
+
+public class RefNoHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RefNoHandler.class);
+
+    private static int nextNo = 1;
+
+    private static String REF_NO_FMT = "%s-%05d";
+
+    public Message<Car> assignRefNo(Message<Car> input) {
+        input.getPayload().setRef(String.format(REF_NO_FMT, input.getPayload().getMake().substring(0, 1), nextNo++));
+
+        LOGGER.info("Input: {} (in Xml)", input.toString());
+
+        return input;
+    }
+}

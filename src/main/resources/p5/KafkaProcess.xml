@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:kafka="http://www.springframework.org/schema/integration/kafka"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/integration
+                           http://www.springframework.org/schema/integration/spring-integration.xsd
+                           http://www.springframework.org/schema/integration/kafka
+                           http://www.springframework.org/schema/integration/kafka/spring-integration-kafka.xsd">
+
+    <context:property-placeholder location="classpath:p5/kafka.properties" />
+
+    <bean id="kafkaContainer" class="org.springframework.kafka.listener.KafkaMessageListenerContainer">
+        <constructor-arg>
+            <bean class="org.springframework.kafka.core.DefaultKafkaConsumerFactory">
+                <constructor-arg>
+                    <map>
+                        <entry key="bootstrap.servers" value="${bootstrap.servers}" />
+                        <entry key="key.deserializer" value="${key.deserializer}" />
+                        <entry key="value.deserializer" value="${value.deserializer}" />
+                        <entry key="group.id" value="${group.id}" />
+                        <entry key="auto.offset.reset" value="${auto.offset.reset}" />
+                        <entry key="enable.auto.commit" value="${enable.auto.commit}" />
+                    </map>
+                </constructor-arg>
+            </bean>
+        </constructor-arg>
+        <constructor-arg>
+            <bean class="org.springframework.kafka.listener.ContainerProperties">
+                <constructor-arg name="topics" value="${consumer.topic}" />
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <int:channel id="inKafkaChannel" />
+
+    <kafka:message-driven-channel-adapter id="kafkaListener"
+                                          listener-container="kafkaContainer"
+                                          mode="record"
+                                          channel="inKafkaChannel" />
+
+    <bean id="inKafkaHandler" class="com.polarsparc.si.p5.KafkaProcessHandler" />
+
+    <int:service-activator input-channel="inKafkaChannel"
+                           ref="inKafkaHandler"
+                           method="handler" />
+
+</beans>

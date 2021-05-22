@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:http="http://www.springframework.org/schema/integration/http"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/integration
+                           http://www.springframework.org/schema/integration/spring-integration.xsd
+                           http://www.springframework.org/schema/integration/http
+                           http://www.springframework.org/schema/integration/http/spring-integration-http.xsd">
+
+    <int:logging-channel-adapter id="logger" level="INFO" log-full-message="true" />
+
+    <int:channel id="inChannel">
+        <int:interceptors>
+            <int:wire-tap channel="logger" />
+        </int:interceptors>
+    </int:channel>
+
+    <int:channel id="outChannel">
+        <int:queue capacity="5" />
+    </int:channel>
+
+    <int:gateway id="gateway"
+                 service-interface="com.polarsparc.si.p4.SpotPricesGateway">
+        <int:method name="preciousMetalPrices"
+                    request-channel="inChannel"
+                    reply-channel="outChannel">
+            <int:header name="f" expression="#args[0]" />
+            <int:header name="Content-Type" value="application/json" />
+        </int:method>
+    </int:gateway>
+
+    <http:outbound-gateway id="httpGateway"
+                           request-channel="inChannel"
+                           url="http://services.packetizer.com/spotprices/?f={f}"
+                           http-method="GET"
+                           expected-response-type="java.lang.String"
+                           reply-timeout="10000"
+                           reply-channel="outChannel">
+        <http:uri-variable name="f" expression="headers.f" />
+    </http:outbound-gateway>
+
+</beans>

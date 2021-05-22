@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:stream="http://www.springframework.org/schema/integration/stream"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/integration
+                           http://www.springframework.org/schema/integration/spring-integration.xsd
+                           http://www.springframework.org/schema/integration/stream
+                           http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd">
+
+    <bean id="refNoHandler" class="com.polarsparc.si.p6.RefNoHandler" />
+    <bean id="carServiceHandler" class="com.polarsparc.si.p6.CarServiceHandler" />
+    <bean id="toyotaSpecialist" class="com.polarsparc.si.p7.ToyotaSpecialist" />
+    <bean id="hondaSpecialist" class="com.polarsparc.si.p7.HondaSpecialist" />
+
+    <int:channel id="inChannel" />
+    <int:channel id="routerChannel" />
+    <int:channel id="toyotaChannel" />
+    <int:channel id="hondaChannel" />
+    <int:channel id="xformChannel" />
+    <int:channel id="outChannel" />
+
+    <int:gateway id="gateway"
+                 service-interface="com.polarsparc.si.p6.CarServiceGateway"
+                 default-request-channel="inChannel" />
+
+    <int:chain input-channel="inChannel" output-channel="routerChannel">
+        <int:service-activator ref="refNoHandler" method="assignRefNo" />
+
+        <int:header-enricher>
+            <int:header name="CAR_MAKE" expression="payload.getMake()"/>
+        </int:header-enricher>
+
+        <int:service-activator ref="carServiceHandler" method="recommendedServices" />
+    </int:chain>
+
+    <int:header-value-router input-channel="routerChannel"
+                             header-name="CAR_MAKE">
+        <int:mapping value="Toyota" channel="toyotaChannel" />
+        <int:mapping value="Honda" channel="hondaChannel" />
+    </int:header-value-router>
+
+    <int:service-activator input-channel="toyotaChannel"
+                           output-channel="xformChannel"
+                           ref="toyotaSpecialist"
+                           method="completeService" />
+
+    <int:service-activator input-channel="hondaChannel"
+                           output-channel="xformChannel"
+                           ref="hondaSpecialist"
+                           method="completeService" />
+
+    <int:object-to-json-transformer input-channel="xformChannel"
+                                    output-channel="outChannel" />
+
+    <stream:stdout-channel-adapter channel="outChannel"
+                                   append-newline="true" />
+</beans>

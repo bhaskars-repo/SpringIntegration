@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/task
+                           http://www.springframework.org/schema/task/spring-task.xsd
+                           http://www.springframework.org/schema/integration
+                           http://www.springframework.org/schema/integration/spring-integration.xsd">
+
+    <bean id="inMsgHandler" class="com.polarsparc.si.p2.StrUpCaseHandler3" />
+
+    <task:executor id="executor" queue-capacity="5" pool-size="3" />
+
+    <int:channel id="inChannel1">
+        <int:dispatcher task-executor="executor" />
+    </int:channel>
+
+    <int:channel id="outChannel1">
+        <int:queue capacity="5" />
+    </int:channel>
+
+    <!--
+        The primary purpose of a Gateway is to hide the messaging API provided
+        by Spring Integration
+    -->
+
+    <int:gateway id="gateway"
+                 service-interface="com.polarsparc.si.p1.StrUpCaseGateway"
+                 default-request-channel="inChannel1"
+                 default-reply-channel="outChannel1" />
+
+    <int:service-activator input-channel="inChannel1"
+                           output-channel="outChannel1"
+                           ref="inMsgHandler"
+                           method="handler" />
+
+</beans>

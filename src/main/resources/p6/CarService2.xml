@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:stream="http://www.springframework.org/schema/integration/stream"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/integration
+                           http://www.springframework.org/schema/integration/spring-integration.xsd
+                           http://www.springframework.org/schema/integration/stream
+                           http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd">
+
+    <bean id="refNoHandler" class="com.polarsparc.si.p6.RefNoHandler" />
+    <bean id="carServiceHandler" class="com.polarsparc.si.p6.CarServiceHandler" />
+
+    <int:channel id="inChannel" />
+    <int:channel id="outChannel" />
+
+    <int:gateway id="gateway"
+                 service-interface="com.polarsparc.si.p6.CarServiceGateway"
+                 default-request-channel="inChannel" />
+
+    <int:chain input-channel="inChannel" output-channel="outChannel">
+        <int:service-activator ref="refNoHandler" method="assignRefNo" />
+
+        <int:header-enricher>
+            <int:header name="CAR_MAKE" expression="payload.getMake()"/>
+        </int:header-enricher>
+
+        <int:service-activator ref="carServiceHandler" method="recommendedServices" />
+    </int:chain>
+
+    <stream:stdout-channel-adapter channel="outChannel"
+                                   append-newline="true" />
+</beans>

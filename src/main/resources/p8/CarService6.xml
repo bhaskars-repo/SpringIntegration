@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:stream="http://www.springframework.org/schema/integration/stream"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/integration
+                           http://www.springframework.org/schema/integration/spring-integration.xsd
+                           http://www.springframework.org/schema/integration/stream
+                           http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd">
+
+    <bean id="refNoHandler" class="com.polarsparc.si.p6.RefNoHandler" />
+    <bean id="splitHandler" class="com.polarsparc.si.p8.CarServiceSplitter" />
+    <bean id="carInspectHandler" class="com.polarsparc.si.p8.CarInspectionHandler" />
+    <bean id="carRecommendHandler" class="com.polarsparc.si.p6.CarServiceHandler" />
+    <bean id="mergeHandler" class="com.polarsparc.si.p8.CarServiceAggregator" />
+
+    <int:channel id="inChannel" />
+    <int:channel id="splitChannel" />
+    <int:channel id="routerChannel" />
+    <int:channel id="inspChannel" />
+    <int:channel id="recoChannel" />
+    <int:channel id="aggChannel" />
+    <int:channel id="outChannel" />
+
+    <int:gateway id="gateway"
+                 service-interface="com.polarsparc.si.p6.CarServiceGateway"
+                 default-request-channel="inChannel" />
+
+    <int:service-activator input-channel="inChannel"
+                           output-channel="splitChannel"
+                           ref="refNoHandler"
+                           method="assignRefNo" />
+
+    <int:splitter input-channel="splitChannel"
+                  ref="splitHandler"
+                  method="splitter"
+                  output-channel="routerChannel" />
+
+    <int:header-value-router input-channel="routerChannel"
+                             header-name="SERVICE_TYPE">
+        <int:mapping value="INSP" channel="inspChannel" />
+        <int:mapping value="RECO" channel="recoChannel" />
+    </int:header-value-router>
+
+    <int:service-activator input-channel="inspChannel"
+                           output-channel="aggChannel"
+                           ref="carInspectHandler"
+                           method="inspectionServices" />
+
+    <int:service-activator input-channel="recoChannel"
+                           output-channel="aggChannel"
+                           ref="carRecommendHandler"
+                           method="recommendedServices" />
+
+    <int:aggregator input-channel="aggChannel"
+                    ref="mergeHandler"
+                    method="aggregator"
+                    output-channel="outChannel" />
+
+    <stream:stdout-channel-adapter channel="outChannel"
+                                   append-newline="true" />
+</beans>
